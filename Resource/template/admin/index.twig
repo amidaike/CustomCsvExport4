@@ -1,0 +1,193 @@
+{#
+  This file is part of the Custom Csv Export Plugin
+
+  Copyright(c) EC-CUBE CO.,LTD. All Rights Reserved.
+
+  For the full copyright and license information, please view the LICENSE
+  file that was distributed with this source code.
+#}
+
+{% extends '@admin/default_frame.twig' %}
+
+{% set menus = ['setting', 'shop', 'admin_custom_csv_export'] %}
+
+{% block title %}カスタムCSV出力{% endblock %}
+{% block sub_title %}店舗設定{% endblock %}
+
+{% form_theme form '@admin/Form/bootstrap_4_horizontal_layout.html.twig' %}
+
+{% block javascript %}
+    <script>
+        $(function() {
+            $('#register_btn').click(function() {
+                $('#form1').attr('action', "{% if TargetCustomCsvExport.id %}{{ path('plugin_custom_csv_export_edit', {id: TargetCustomCsvExport.id}) }}{% else %}{{ url('plugin_custom_csv_export') }}{% endif %}");
+                $('#form1').submit();
+                return false;
+            });
+
+            $('#check_btn').click(function() {
+                $('#form1').attr('action', "{% if TargetCustomCsvExport.id %}{{ path('plugin_custom_csv_export_edit_confirm', {id: TargetCustomCsvExport.id}) }}{% else %}{{ url('plugin_custom_csv_export_confirm') }}{% endif %}");
+                $('#form1').submit();
+                return false;
+            });
+
+            // 削除モーダルのhrefとmessageの変更
+            $('#DeleteModal').on('shown.bs.modal', function(event) {
+                var target = $(event.relatedTarget);
+                // hrefの変更
+                $(this).find('[data-method="delete"]').attr('href', target.data('url'));
+
+                // messageの変更
+                $(this).find('p.modal-message').text(target.data('message'));
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block main %}
+
+    <form id="form1" name="form1" method="post">
+        {{ form_widget(form._token) }}
+        <div class="c-contentsArea__cols">
+            <div class="c-contentsArea__primaryCol">
+                <div class="c-primaryCol">
+                    <div class="card rounded border-0 mb-4">
+                        <div class="card-body p-0">
+                            <div class="card rounded border-0">
+                                <ul class="list-group list-group-flush sortable-container">
+                                    {% if CustomCsvExports|length > 0 %}
+                                        {% for CustomCsvExport in CustomCsvExports %}
+                                            <li id="ex-delivery-{{ CustomCsvExport.id }}" class="list-group-item" data-id="{{ CustomCsvExport.id }}">
+                                                <div class="row justify-content-around">
+                                                    <div class="col d-flex align-items-center">
+                                                        <a href="{{ url('plugin_custom_csv_export_edit', {id: CustomCsvExport.id}) }}">{{ CustomCsvExport.sql_name }}</a>
+                                                    </div>
+                                                    <div class="col-auto text-right">
+                                                        <div class="d-inline-block mr-2" data-tooltip="true" data-placement="top" title="CSV出力">
+                                                            <a class="btn btn-ec-actionIcon text-body" href="{{ url('plugin_custom_csv_export_output', {id: CustomCsvExport.id}) }}">
+                                                                <i class="fas fa-file-export fa-lg"></i>
+                                                            </a>
+                                                        </div>
+                                                        <div class="d-inline-block mr-2" data-tooltip="true" data-placement="top" title="{{ 'admin.common.delete'|trans }}">
+                                                            <a class="btn btn-ec-actionIcon" data-toggle="modal" data-target="#DeleteModal"
+                                                               data-url="{{ url('plugin_custom_csv_export_delete', {id: CustomCsvExport.id}) }}"
+                                                               data-message="{{ 'admin.common.delete_modal__message'|trans({ "%name%" : CustomCsvExport.sql_name }) }}">
+                                                                <i class="fas fa-close fa-lg"></i>
+                                                            </a>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </li>
+                                        {% endfor %}
+                                    {% else %}
+                                        <li class="list-group-item">
+                                            <div class="row justify-content-around">
+                                                <div class="col d-flex align-items-center">
+                                                    データはありません。
+                                                </div>
+                                            </div>
+                                        </li>
+                                    {% endif %}
+                                </ul>
+                                <!-- 削除モーダル -->
+                                <div class="modal fade" id="DeleteModal" tabindex="-1" role="dialog"
+                                     aria-labelledby="DeleteModal" aria-hidden="true">
+                                    <div class="modal-dialog" role="document">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title font-weight-bold">
+                                                    {{ 'admin.common.delete_modal__title'|trans }}
+                                                </h5>
+                                                <button class="close" type="button" data-dismiss="modal" aria-label="Close">
+                                                    <span aria-hidden="true">×</span>
+                                                </button>
+                                            </div>
+                                            <div class="modal-body text-left">
+                                                <p class="text-left modal-message"><!-- jsでメッセージを挿入 --></p>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button class="btn btn-ec-sub" type="button" data-dismiss="modal">
+                                                    {{ 'admin.common.cancel'|trans }}
+                                                </button>
+                                                <a class="btn btn-ec-delete" href="#" {{ csrf_token_for_anchor() }}
+                                                   data-method="delete" data-confirm="false">
+                                                    {{ 'admin.common.delete'|trans }}
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <div class="card rounded border-0 mb-4">
+                        <div class="card-header">
+                            <div class="row">
+                                <div class="col-8">
+                                    <div class="d-inline-block">
+                                        <span class="card-title">SQL設定
+                                            {% if TargetCustomCsvExport.id %}
+                                                (編集中：{{ TargetCustomCsvExport.sql_name }})
+                                            {% else %}
+                                                (新規入力)
+                                            {% endif %}</span>
+                                    </div>
+                                </div>
+                                <div class="col-4 text-right">
+                                    <a data-toggle="collapse" href="#product-info" aria-expanded="false"
+                                       aria-controls="freeArea">
+                                        <i class="fa fa-angle-up fa-lg"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="collapse show ec-cardCollapse" id="product-info">
+                            <div class="card-body">
+                                {% if message is defined and message is not null %}
+                                    <div class="row">
+                                        <div class="col-3">
+                                            <div class="d-inline-block">
+                                                <span>SQL確認結果</span>
+                                            </div>
+                                        </div>
+                                        <div class="col mb-2 text-success">
+                                            {{ message }}
+                                        </div>
+                                    </div>
+                                {% endif %}
+
+                                {{ form_widget(form._token) }}
+                                {{ form_row(form.sql_name, {attr: {placeholder: '保存するSQL名を入力'}}) }}
+                                {{ form_row(form.custom_sql, {attr: {'rows': 10, placeholder: 'SQL文を入力、SQL文には読み込み関係以外のSQLコマンドおよび";"記号は入力できません。'}}) }}
+                                <div class="col-sm-0 col-sm-offset-3 col-md-12 col-md-offset-0">
+                                    <button id="check_btn" class="btn btn-ec-conversion btn-block px-5">SQLチェック</button>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="c-conversionArea">
+                <div class="c-conversionArea__container">
+                    <div class="row justify-content-between align-items-center">
+                        <div class="col-6">
+                            <div class="c-conversionArea__leftBlockItem"></div>
+                        </div>
+                        <div class="col-6">
+                            <div id="ex-conversion-action" class="row align-items-center justify-content-end">
+                                <div class="col-auto">
+                                    <button id="register_btn" type="submit" class="btn btn-ec-conversion px-5">{{ 'admin.common.registration'|trans }}</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+
+{% endblock %}
